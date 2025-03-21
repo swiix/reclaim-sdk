@@ -64,13 +64,26 @@ class Task(BaseResource):
     max_chunk_size: Optional[int] = Field(
         None, alias="maxChunkSize", description="Maximum chunk size"
     )
+    time_chunks_spent: Optional[int] = Field(
+        None, alias="timeChunksSpent", description="Time chunks spent"
+    )
+    time_chunks_remaining: Optional[int] = Field(
+        None, alias="timeChunksRemaining", description="Time chunks remaining"
+    )
     priority: TaskPriority = Field(None, description="Task priority")
     on_deck: bool = Field(False, alias="onDeck", description="Task is on deck")
+    at_risk: bool = Field(False, alias="atRisk", description="Task is at risk")
+    deleted: bool = Field(False, alias="deleted", description="Task is deleted")
+    adjusted: bool = Field(False, alias="adjusted", description="Task is adjusted")
+    deferred: bool = Field(False, alias="deferred", description="Task is deferred")
     always_private: bool = Field(
         False, alias="alwaysPrivate", description="Task is always private"
     )
     status: Optional[TaskStatus] = Field(None, description="Task status")
     due: Optional[datetime] = Field(None, description="Due date")
+    created: Optional[datetime] = Field(None, description="Created date")
+    updated: Optional[datetime] = Field(None, description="Updated date")
+    finished: Optional[datetime] = Field(None, description="Finished date")
     snooze_until: Optional[datetime] = Field(
         None, alias="snoozeUntil", description="Snooze until date"
     )
