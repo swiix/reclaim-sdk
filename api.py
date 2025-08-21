@@ -46,7 +46,7 @@ def format_duration_text(duration_hours: Optional[float]) -> Optional[str]:
             return f"{days}d {hours}h {minutes}min"
 
 def format_progress_text(time_chunks_spent: Optional[int], time_chunks_remaining: Optional[int]) -> Optional[str]:
-    """Format progress as 'Arbeitsblöcke X/Y' or 'X verbleibend'"""
+    """Format progress as 'X rest (Y% done)' or 'X total'"""
     if time_chunks_spent is None or time_chunks_remaining is None:
         return None
     
@@ -56,13 +56,23 @@ def format_progress_text(time_chunks_spent: Optional[int], time_chunks_remaining
     total_chunks = time_chunks_spent + time_chunks_remaining
     
     if time_chunks_spent == 0:
-        return f"{format_duration_text(time_chunks_remaining / 4)} verbleibend"
+        # Nothing done yet
+        total_hours = time_chunks_remaining / 4
+        return f"{format_duration_text(total_hours)} total"
     elif time_chunks_remaining == 0:
-        return f"{format_duration_text(time_chunks_spent / 4)} erledigt"
+        # All done
+        total_hours = time_chunks_spent / 4
+        return f"✅ erledigt ({format_duration_text(total_hours)} total)"
     else:
+        # Partially done
         spent_hours = time_chunks_spent / 4
+        remaining_hours = time_chunks_remaining / 4
         total_hours = total_chunks / 4
-        return f"Arbeitsblöcke {format_duration_text(spent_hours)}/{format_duration_text(total_hours)}"
+        
+        # Calculate percentage
+        percentage = int((spent_hours / total_hours) * 100)
+        
+        return f"{format_duration_text(remaining_hours)} rest ({percentage}%, {format_duration_text(total_hours)} total)"
 
 def format_snooze_days(snooze_until: Optional[datetime]) -> Optional[str]:
     """Format snooze information with days postponed"""
