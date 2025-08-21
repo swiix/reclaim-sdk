@@ -186,7 +186,7 @@ async def root():
                     "german_format": "true"
                 },
                 "example_response": {
-                    "email_text": "📅 15. Januar 2025\n\n📅 Überfällige Tasks (5):\n• steuerberater wechseln (P1) - 17. August - 3h 30min\n\n⚠️ Tasks mit Risiko (35):\n• Biban Umsetzung (P1) - 31. August - 2h 30min\n\nGesamt: 40 Aufgaben benötigen Aufmerksamkeit",
+                    "email_text": "📅 15. Januar 2025\n\n📅 Überfällige Tasks (5):\n• steuerberater wechseln (P1) - 17. August - 3h 30min\n\n⚠️ Tasks mit Risiko (35):\n• Biban Umsetzung (P1) - 31. August - 2h 30min\n\nGesamt: 40 Aufgaben benötigen Aufmerksamkeit\n\n🔗 Direkte Links:\n• https://app.reclaim.ai/planner?taskSort=schedule - Zum Planner (Kalender)\n• https://app.reclaim.ai/priorities - Zum Prioritäts Planner",
                     "overdue_count": 5,
                     "at_risk_count": 35,
                     "total_count": 40,
@@ -446,7 +446,10 @@ async def get_tasks_summary():
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
             email_text += f"• {task.title} ({str(task.priority)}) - {due_date} - {duration_text}\n"
         
-        email_text += f"\nGesamt: {len(overdue_tasks) + len(at_risk_tasks)} Aufgaben benötigen Aufmerksamkeit"
+        email_text += f"\nGesamt: {len(overdue_tasks) + len(at_risk_tasks)} Aufgaben benötigen Aufmerksamkeit\n\n"
+        email_text += "🔗 Direkte Links:\n"
+        email_text += "• https://app.reclaim.ai/planner?taskSort=schedule - Zum Planner (Kalender)\n"
+        email_text += "• https://app.reclaim.ai/priorities - Zum Prioritäts Planner"
         
         return {
             "email_text": email_text,
