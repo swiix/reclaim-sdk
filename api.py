@@ -9,6 +9,10 @@ import sys
 # Add the current directory to the path to import reclaim_sdk
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+from reclaim_sdk.client import ReclaimClient
+from reclaim_sdk.resources.task import Task, TaskStatus
+from reclaim_sdk.resources.event import Event
+
 def format_duration_text(duration_hours: Optional[float]) -> Optional[str]:
     """Convert duration from hours to human-readable text format"""
     if duration_hours is None:
@@ -95,6 +99,51 @@ def format_snooze_days(snooze_until: Optional[datetime]) -> Optional[str]:
     else:
         return f"Aufgeschoben bis {snooze_until.strftime('%d. %B')} (heute)"
 
+def get_next_event_for_task(task_id: int, client: ReclaimClient) -> Optional[dict]:
+    """Get the next scheduled event for a task"""
+    try:
+        # Get future events for this task
+        future_events = Event.list_future_events(client=client, task_ids=[task_id])
+        
+        if not future_events:
+            return None
+        
+        # Sort by start time and get the earliest
+        future_events.sort(key=lambda e: e.event_start if e.event_start else datetime.max.replace(tzinfo=datetime.now().tzinfo))
+        next_event = future_events[0]
+        
+        if not next_event.event_start:
+            return None
+        
+        # Calculate time until start
+        now = datetime.now(next_event.event_start.tzinfo)
+        time_until = next_event.event_start - now
+        
+        # Format time until start
+        if time_until.days > 0:
+            time_until_text = f"in {time_until.days} Tagen"
+        elif time_until.total_seconds() > 3600:
+            hours = int(time_until.total_seconds() // 3600)
+            time_until_text = f"in {hours}h"
+        elif time_until.total_seconds() > 60:
+            minutes = int(time_until.total_seconds() // 60)
+            time_until_text = f"in {minutes}min"
+        else:
+            time_until_text = "jetzt"
+        
+        return {
+            "event_id": next_event.event_id,
+            "title": next_event.title,
+            "start": next_event.event_start.isoformat(),
+            "end": next_event.event_end.isoformat() if next_event.event_end else None,
+            "duration_hours": next_event.get_duration_hours(),
+            "time_until": time_until_text,
+            "lock_state": next_event.lock_state,
+            "defended": next_event.defended
+        }
+    except Exception:
+        return None
+
 def format_due_date_info(due: Optional[datetime], snooze_until: Optional[datetime]) -> str:
     """Format due date information with snooze details"""
     if due is None:
@@ -147,6 +196,7 @@ class TaskResponse(BaseModel):
     time_chunks_spent: Optional[int] = None
     time_chunks_remaining: Optional[int] = None
     progress_text: Optional[str] = None
+    next_event: Optional[dict] = None
 
 @app.get("/")
 async def root():
@@ -329,8 +379,6 @@ async def health_check():
 async def get_tasks():
     """Get all tasks"""
     try:
-        from reclaim_sdk.client import ReclaimClient
-        from reclaim_sdk.resources.task import Task
         
         # Configure client with token from environment
         token = os.environ.get("RECLAIM_TOKEN")
@@ -347,6 +395,9 @@ async def get_tasks():
         # Convert to response format
         task_responses = []
         for task in tasks:
+            # Get next event for this task
+            next_event = get_next_event_for_task(task.id, client) if task.id else None
+            
             task_responses.append(TaskResponse(
                 id=str(task.id),
                 title=task.title,
@@ -360,7 +411,8 @@ async def get_tasks():
                 snooze_until=task.snooze_until,
                 time_chunks_spent=task.time_chunks_spent,
                 time_chunks_remaining=task.time_chunks_remaining,
-                progress_text=format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)
+                progress_text=format_progress_text(task.time_chunks_spent, task.time_chunks_remaining),
+                next_event=next_event
             ))
         
         return task_responses
@@ -372,8 +424,6 @@ async def get_tasks():
 async def get_tasks_at_risk():
     """Get only tasks that are at risk, excluding archived tasks"""
     try:
-        from reclaim_sdk.client import ReclaimClient
-        from reclaim_sdk.resources.task import Task
         
         # Configure client with token from environment
         token = os.environ.get("RECLAIM_TOKEN")
@@ -431,8 +481,6 @@ async def get_tasks_at_risk():
 async def get_overdue_tasks():
     """Get only tasks that are overdue (due date in the past)"""
     try:
-        from reclaim_sdk.client import ReclaimClient
-        from reclaim_sdk.resources.task import Task
         from datetime import datetime, timezone
         
         # Configure client with token from environment
@@ -494,8 +542,6 @@ async def get_overdue_tasks():
 async def get_tasks_summary():
     """Get a summary of overdue and at-risk tasks as readable email text"""
     try:
-        from reclaim_sdk.client import ReclaimClient
-        from reclaim_sdk.resources.task import Task
         from datetime import datetime, timezone
         
         # Configure client with token from environment
@@ -549,10 +595,15 @@ async def get_tasks_summary():
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
             priority_short = str(task.priority).replace("TaskPriority.P1", "P1").replace("TaskPriority.P2", "P2").replace("TaskPriority.P3", "P3").replace("TaskPriority.P4", "P4")
             progress_info = format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)
+            
+            # Get next event info
+            next_event = get_next_event_for_task(task.id, client) if task.id else None
+            event_info = f" | 📅 {next_event['time_until']}" if next_event else ""
+            
             if progress_info:
-                email_text += f"• {task.title} ({priority_short}) - {due_date_info} - {progress_info}\n"
+                email_text += f"• {task.title} ({priority_short}) - {due_date_info} - {progress_info}{event_info}\n"
             else:
-                email_text += f"• {task.title} ({priority_short}) - {due_date_info} - {duration_text}\n"
+                email_text += f"• {task.title} ({priority_short}) - {due_date_info} - {duration_text}{event_info}\n"
         
         email_text += "\n"
         
@@ -563,10 +614,15 @@ async def get_tasks_summary():
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
             priority_short = str(task.priority).replace("TaskPriority.P1", "P1").replace("TaskPriority.P2", "P2").replace("TaskPriority.P3", "P3").replace("TaskPriority.P4", "P4")
             progress_info = format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)
+            
+            # Get next event info
+            next_event = get_next_event_for_task(task.id, client) if task.id else None
+            event_info = f" | 📅 {next_event['time_until']}" if next_event else ""
+            
             if progress_info:
-                email_text += f"• {task.title} ({priority_short}) - {due_date_info} - {progress_info}\n"
+                email_text += f"• {task.title} ({priority_short}) - {due_date_info} - {progress_info}{event_info}\n"
             else:
-                email_text += f"• {task.title} ({priority_short}) - {due_date_info} - {duration_text}\n"
+                email_text += f"• {task.title} ({priority_short}) - {due_date_info} - {duration_text}{event_info}\n"
         
         email_text += f"\nGesamt: {len(overdue_tasks) + len(at_risk_tasks)} Aufgaben benötigen Aufmerksamkeit\n\n"
         email_text += "🔗 Direkte Links:\n"
@@ -583,7 +639,12 @@ async def get_tasks_summary():
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
             priority_short = str(task.priority).replace("TaskPriority.P1", "P1").replace("TaskPriority.P2", "P2").replace("TaskPriority.P3", "P3").replace("TaskPriority.P4", "P4")
             progress_info = f" <strong>{format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}</strong>" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
-            html_text += f"<li><strong><a href=\"https://app.reclaim.ai/tasks/{task.id}\">{task.title}</a></strong> ({priority_short}) - {due_date_info} - {duration_text}{progress_info}</li>\n"
+            
+            # Get next event info for HTML
+            next_event = get_next_event_for_task(task.id, client) if task.id else None
+            event_info = f" | <em>📅 {next_event['time_until']}</em>" if next_event else ""
+            
+            html_text += f"<li><strong><a href=\"https://app.reclaim.ai/tasks/{task.id}\">{task.title}</a></strong> ({priority_short}) - {due_date_info} - {duration_text}{progress_info}{event_info}</li>\n"
         html_text += "</ul>\n\n"
         
         # At-risk section
@@ -593,7 +654,12 @@ async def get_tasks_summary():
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
             priority_short = str(task.priority).replace("TaskPriority.P1", "P1").replace("TaskPriority.P2", "P2").replace("TaskPriority.P3", "P3").replace("TaskPriority.P4", "P4")
             progress_info = f" <strong>{format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}</strong>" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
-            html_text += f"<li><strong><a href=\"https://app.reclaim.ai/tasks/{task.id}\">{task.title}</a></strong> ({priority_short}) - {due_date_info} - {duration_text}{progress_info}</li>\n"
+            
+            # Get next event info for HTML
+            next_event = get_next_event_for_task(task.id, client) if task.id else None
+            event_info = f" | <em>📅 {next_event['time_until']}</em>" if next_event else ""
+            
+            html_text += f"<li><strong><a href=\"https://app.reclaim.ai/tasks/{task.id}\">{task.title}</a></strong> ({priority_short}) - {due_date_info} - {duration_text}{progress_info}{event_info}</li>\n"
         html_text += "</ul>\n\n"
         
         html_text += f"<p><strong>Gesamt: {len(overdue_tasks) + len(at_risk_tasks)} Aufgaben benötigen Aufmerksamkeit</strong></p>\n\n"
@@ -618,8 +684,6 @@ async def get_tasks_summary():
 async def get_daily_tasks():
     """Get a daily-focused view of tasks with time estimates and urgency indicators"""
     try:
-        from reclaim_sdk.client import ReclaimClient
-        from reclaim_sdk.resources.task import Task, TaskStatus
         from datetime import datetime, timezone
         
         # Configure client with token from environment
@@ -754,8 +818,6 @@ async def get_daily_tasks():
 async def get_upcoming_tasks():
     """Get upcoming tasks sorted by due date"""
     try:
-        from reclaim_sdk.client import ReclaimClient
-        from reclaim_sdk.resources.task import Task, TaskStatus
         from datetime import datetime, timezone
         
         # Configure client with token from environment
