@@ -92,22 +92,18 @@ def format_due_date_info(due: Optional[datetime], snooze_until: Optional[datetim
     if snooze_until is None:
         return due_date
     
-    # Calculate original vs snooze
-    from datetime import datetime, timezone
-    now = datetime.now(timezone.utc)
+    # Calculate days between due and snooze
+    snooze_days_diff = (snooze_until - due).days
     
-    due_days_diff = (due - now).days
-    snooze_days_diff = (snooze_until - now).days
-    
-    if due_days_diff < 0 and snooze_days_diff >= 0:
-        # Overdue but snoozed to future
+    if snooze_days_diff > 0:
+        # Snoozed to future
         return f"{due_date} → {snooze_until.strftime('%d. %B')} (+{snooze_days_diff} Tage)"
-    elif due_days_diff < 0 and snooze_days_diff < 0:
-        # Overdue and snooze also overdue
-        return f"{due_date} → {snooze_until.strftime('%d. %B')} ({abs(snooze_days_diff)} Tage überfällig)"
+    elif snooze_days_diff < 0:
+        # Snoozed to past
+        return f"{due_date} → {snooze_until.strftime('%d. %B')} ({abs(snooze_days_diff)} Tage früher)"
     else:
-        # Not overdue yet
-        return f"{due_date} → {snooze_until.strftime('%d. %B')} (+{snooze_days_diff} Tage)"
+        # Same day
+        return f"{due_date} → {snooze_until.strftime('%d. %B')} (gleicher Tag)"
 
 app = FastAPI(
     title="Reclaim Tasks API",
