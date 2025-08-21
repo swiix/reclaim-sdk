@@ -46,7 +46,7 @@ def format_duration_text(duration_hours: Optional[float]) -> Optional[str]:
             return f"{days}d {hours}h {minutes}min"
 
 def format_progress_text(time_chunks_spent: Optional[int], time_chunks_remaining: Optional[int]) -> Optional[str]:
-    """Format progress as compact display with sessions logic"""
+    """Format progress as clean display without brackets and duplication"""
     if time_chunks_spent is None or time_chunks_remaining is None:
         return None
     
@@ -65,7 +65,7 @@ def format_progress_text(time_chunks_spent: Optional[int], time_chunks_remaining
     elif time_chunks_remaining == 0:
         # All done - always show sessions
         total_hours = time_chunks_spent / 4
-        return f"✅ ({format_duration_text(total_hours)} | {total_chunks} Sessions)"
+        return f"✅ ({total_chunks} Sessions)"
     else:
         # Partially done - show progress with time breakdown
         spent_hours = time_chunks_spent / 4
@@ -75,7 +75,7 @@ def format_progress_text(time_chunks_spent: Optional[int], time_chunks_remaining
         # Calculate percentage
         percentage = int((spent_hours / total_hours) * 100)
         
-        return f"{format_duration_text(remaining_hours)} ⏳ ({percentage}% | {format_duration_text(spent_hours)}/{format_duration_text(total_hours)})"
+        return f"{format_duration_text(remaining_hours)} ⏳ {percentage}% ({format_duration_text(spent_hours)}/{format_duration_text(total_hours)})"
 
 def format_snooze_days(snooze_until: Optional[datetime]) -> Optional[str]:
     """Format snooze information with days postponed"""
@@ -548,8 +548,11 @@ async def get_tasks_summary():
             due_date_info = format_due_date_info(task.due, task.snooze_until)
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
             priority_short = str(task.priority).replace("TaskPriority.P1", "P1").replace("TaskPriority.P2", "P2").replace("TaskPriority.P3", "P3").replace("TaskPriority.P4", "P4")
-            progress_info = f" [{format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}]" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
-            email_text += f"• {task.title} ({priority_short}) - {due_date_info} - {duration_text}{progress_info}\n"
+            progress_info = format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)
+            if progress_info:
+                email_text += f"• {task.title} ({priority_short}) - {due_date_info} - {progress_info}\n"
+            else:
+                email_text += f"• {task.title} ({priority_short}) - {due_date_info} - {duration_text}\n"
         
         email_text += "\n"
         
@@ -559,8 +562,11 @@ async def get_tasks_summary():
             due_date_info = format_due_date_info(task.due, task.snooze_until)
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
             priority_short = str(task.priority).replace("TaskPriority.P1", "P1").replace("TaskPriority.P2", "P2").replace("TaskPriority.P3", "P3").replace("TaskPriority.P4", "P4")
-            progress_info = f" [{format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}]" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
-            email_text += f"• {task.title} ({priority_short}) - {due_date_info} - {duration_text}{progress_info}\n"
+            progress_info = format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)
+            if progress_info:
+                email_text += f"• {task.title} ({priority_short}) - {due_date_info} - {progress_info}\n"
+            else:
+                email_text += f"• {task.title} ({priority_short}) - {due_date_info} - {duration_text}\n"
         
         email_text += f"\nGesamt: {len(overdue_tasks) + len(at_risk_tasks)} Aufgaben benötigen Aufmerksamkeit\n\n"
         email_text += "🔗 Direkte Links:\n"
@@ -576,7 +582,7 @@ async def get_tasks_summary():
             due_date_info = format_due_date_info(task.due, task.snooze_until)
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
             priority_short = str(task.priority).replace("TaskPriority.P1", "P1").replace("TaskPriority.P2", "P2").replace("TaskPriority.P3", "P3").replace("TaskPriority.P4", "P4")
-            progress_info = f" <strong>[{format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}]</strong>" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
+            progress_info = f" <strong>{format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}</strong>" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
             html_text += f"<li><strong><a href=\"https://app.reclaim.ai/tasks/{task.id}\">{task.title}</a></strong> ({priority_short}) - {due_date_info} - {duration_text}{progress_info}</li>\n"
         html_text += "</ul>\n\n"
         
@@ -586,7 +592,7 @@ async def get_tasks_summary():
             due_date_info = format_due_date_info(task.due, task.snooze_until)
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
             priority_short = str(task.priority).replace("TaskPriority.P1", "P1").replace("TaskPriority.P2", "P2").replace("TaskPriority.P3", "P3").replace("TaskPriority.P4", "P4")
-            progress_info = f" <strong>[{format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}]</strong>" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
+            progress_info = f" <strong>{format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}</strong>" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
             html_text += f"<li><strong><a href=\"https://app.reclaim.ai/tasks/{task.id}\">{task.title}</a></strong> ({priority_short}) - {due_date_info} - {duration_text}{progress_info}</li>\n"
         html_text += "</ul>\n\n"
         
@@ -693,7 +699,7 @@ async def get_daily_tasks():
             for task in critical_tasks:
                 due_date_info = format_due_date_info(task.due, task.snooze_until)
                 duration_text = format_duration_text(task.duration) or "Keine Dauer"
-                progress_info = f" [{format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}]" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
+                progress_info = f" {format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
                 daily_text += f"• {task.title} - {due_date_info} - {duration_text}{progress_info}\n"
             daily_text += "\n"
         
@@ -703,7 +709,7 @@ async def get_daily_tasks():
             for task in high_priority_tasks:
                 due_date_info = format_due_date_info(task.due, task.snooze_until)
                 duration_text = format_duration_text(task.duration) or "Keine Dauer"
-                progress_info = f" [{format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}]" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
+                progress_info = f" {format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
                 daily_text += f"• {task.title} - {due_date_info} - {duration_text}{progress_info}\n"
             daily_text += "\n"
         
@@ -713,7 +719,7 @@ async def get_daily_tasks():
             for task in medium_priority_tasks[:5]:  # Limit to 5 for daily view
                 due_date_info = format_due_date_info(task.due, task.snooze_until)
                 duration_text = format_duration_text(task.duration) or "Keine Dauer"
-                progress_info = f" [{format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}]" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
+                progress_info = f" {format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
                 daily_text += f"• {task.title} - {due_date_info} - {duration_text}{progress_info}\n"
             if len(medium_priority_tasks) > 5:
                 daily_text += f"... und {len(medium_priority_tasks) - 5} weitere\n"
@@ -743,6 +749,108 @@ async def get_daily_tasks():
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting daily tasks: {str(e)}")
+
+@app.get("/tasks/upcoming")
+async def get_upcoming_tasks():
+    """Get upcoming tasks sorted by due date"""
+    try:
+        from reclaim_sdk.client import ReclaimClient
+        from reclaim_sdk.resources.task import Task, TaskStatus
+        from datetime import datetime, timezone
+        
+        # Configure client with token from environment
+        token = os.environ.get("RECLAIM_TOKEN")
+        if not token:
+            raise HTTPException(
+                status_code=500,
+                detail="RECLAIM_TOKEN environment variable is not set"
+            )
+        client = ReclaimClient.configure(token=token)
+        
+        # Get all tasks
+        tasks = Task.list()
+        
+        # Filter upcoming tasks (not overdue, not archived, not cancelled, with due date)
+        upcoming_tasks = []
+        now = datetime.now(timezone.utc)
+        
+        for task in tasks:
+            # Skip archived and cancelled tasks
+            if task.status in [TaskStatus.ARCHIVED, TaskStatus.CANCELLED]:
+                continue
+                
+            # Skip overdue tasks
+            if task.due and task.due < now:
+                continue
+                
+            # Include tasks with due date in the future
+            if task.due and task.due >= now:
+                upcoming_tasks.append(task)
+        
+        # Sort by due date (earliest first)
+        upcoming_tasks.sort(key=lambda x: x.due or datetime.max.replace(tzinfo=timezone.utc))
+        
+        # Limit to next 20 tasks for overview
+        upcoming_tasks = upcoming_tasks[:20]
+        
+        # Generate upcoming summary
+        current_date = datetime.now().strftime("%d. %B %Y")
+        
+        upcoming_text = f"📅 Nächste geplante Tasks - {current_date}\n\n"
+        
+        if not upcoming_tasks:
+            upcoming_text += "✅ Keine anstehenden Tasks geplant!\n\n"
+        else:
+            upcoming_text += f"📊 Nächste {len(upcoming_tasks)} Tasks:\n\n"
+            
+            for i, task in enumerate(upcoming_tasks, 1):
+                # Calculate days until due
+                days_until = (task.due - now).days
+                
+                if days_until == 0:
+                    due_info = "HEUTE"
+                elif days_until == 1:
+                    due_info = "MORGEN"
+                elif days_until < 7:
+                    due_info = f"in {days_until} Tagen"
+                else:
+                    due_info = f"in {days_until} Tagen"
+                
+                due_date = task.due.strftime("%d. %B")
+                duration_text = format_duration_text(task.duration) or "Keine Dauer"
+                priority_short = str(task.priority).replace("TaskPriority.P1", "P1").replace("TaskPriority.P2", "P2").replace("TaskPriority.P3", "P3").replace("TaskPriority.P4", "P4")
+                progress_info = f" [{format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}]" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
+                
+                upcoming_text += f"{i:2d}. {task.title} ({priority_short}) - {due_date} ({due_info}) - {duration_text}{progress_info}\n"
+        
+        # Add quick stats
+        if upcoming_tasks:
+            today_tasks = [t for t in upcoming_tasks if (t.due - now).days == 0]
+            tomorrow_tasks = [t for t in upcoming_tasks if (t.due - now).days == 1]
+            this_week_tasks = [t for t in upcoming_tasks if (t.due - now).days <= 7]
+            
+            upcoming_text += f"\n📈 Übersicht:\n"
+            upcoming_text += f"• Heute: {len(today_tasks)} Tasks\n"
+            upcoming_text += f"• Morgen: {len(tomorrow_tasks)} Tasks\n"
+            upcoming_text += f"• Diese Woche: {len(this_week_tasks)} Tasks\n"
+        
+        # Links
+        upcoming_text += "\n🔗 Schnellzugriff:\n"
+        upcoming_text += "• https://app.reclaim.ai/planner - Kalender\n"
+        upcoming_text += "• https://app.reclaim.ai/priorities - Prioritäten\n"
+        
+        return {
+            "text": upcoming_text,
+            "total_upcoming": len(upcoming_tasks),
+            "today_count": len([t for t in upcoming_tasks if (t.due - now).days == 0]),
+            "tomorrow_count": len([t for t in upcoming_tasks if (t.due - now).days == 1]),
+            "this_week_count": len([t for t in upcoming_tasks if (t.due - now).days <= 7]),
+            "next_task_due": upcoming_tasks[0].due.isoformat() if upcoming_tasks else None,
+            "generated_at": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting upcoming tasks: {str(e)}")
 
 # For local development only
 if __name__ == "__main__":
