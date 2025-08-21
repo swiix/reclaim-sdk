@@ -9,6 +9,42 @@ import sys
 # Add the current directory to the path to import reclaim_sdk
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+def format_duration_text(duration_hours: Optional[float]) -> Optional[str]:
+    """Convert duration from hours to human-readable text format"""
+    if duration_hours is None:
+        return None
+    
+    if duration_hours == 0:
+        return "0 min"
+    
+    # Convert to minutes
+    total_minutes = int(duration_hours * 60)
+    
+    # Handle different time ranges
+    if total_minutes < 60:
+        return f"{total_minutes} min"
+    elif total_minutes == 60:
+        return "1h"
+    elif total_minutes < 1440:  # Less than 24 hours
+        hours = total_minutes // 60
+        minutes = total_minutes % 60
+        if minutes == 0:
+            return f"{hours}h"
+        else:
+            return f"{hours}h {minutes}min"
+    else:  # 24 hours or more
+        days = total_minutes // 1440
+        remaining_minutes = total_minutes % 1440
+        hours = remaining_minutes // 60
+        minutes = remaining_minutes % 60
+        
+        if hours == 0 and minutes == 0:
+            return f"{days}d"
+        elif minutes == 0:
+            return f"{days}d {hours}h"
+        else:
+            return f"{days}d {hours}h {minutes}min"
+
 app = FastAPI(
     title="Reclaim Tasks API",
     description="REST API für Reclaim.ai Aufgabenverwaltung",
@@ -33,6 +69,7 @@ class TaskResponse(BaseModel):
     at_risk: Optional[bool] = None
     due: Optional[datetime] = None
     duration: Optional[float] = None
+    duration_text: Optional[str] = None
 
 @app.get("/")
 async def root():
@@ -70,7 +107,8 @@ async def root():
                     "status": "TaskStatus.IN_PROGRESS",
                     "at_risk": False,
                     "due": "2025-01-15T10:00:00Z",
-                    "duration": 60.0
+                    "duration": 2.5,
+                    "duration_text": "2h 30min"
                 }
             },
             "tasks_at_risk": {
@@ -93,7 +131,8 @@ async def root():
                             "status": "TaskStatus.SCHEDULED",
                             "at_risk": True,
                             "due": "2025-01-10T10:00:00Z",
-                            "duration": 120.0
+                            "duration": 2.0,
+                            "duration_text": "2h"
                         }
                     ],
                     "filter_info": {
@@ -111,7 +150,8 @@ async def root():
             "status": "Status: NEW, SCHEDULED, IN_PROGRESS, COMPLETE, CANCELLED, ARCHIVED (String)",
             "at_risk": "Risiko-Status (Boolean)",
             "due": "Fälligkeitsdatum (ISO 8601 String, optional)",
-            "duration": "Geplante Dauer in Minuten (Float, optional)"
+            "duration": "Geplante Dauer in Stunden (Float, optional)",
+            "duration_text": "Benutzerfreundliche Dauer-Anzeige (String, optional)"
         },
         "authentication": {
             "method": "API Token",
@@ -163,7 +203,8 @@ async def get_tasks():
                 status=str(task.status) if task.status else None,
                 at_risk=task.at_risk,
                 due=task.due,
-                duration=task.duration
+                duration=task.duration,
+                duration_text=format_duration_text(task.duration)
             ))
         
         return task_responses
@@ -207,7 +248,8 @@ async def get_tasks_at_risk():
                 status=str(task.status) if task.status else None,
                 at_risk=task.at_risk,
                 due=task.due,
-                duration=task.duration
+                duration=task.duration,
+                duration_text=format_duration_text(task.duration)
             ))
         
         return {
