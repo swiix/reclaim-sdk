@@ -436,7 +436,8 @@ async def get_tasks_summary():
         for task in overdue_tasks:
             due_date = task.due.strftime("%d. %B") if task.due else "Kein Datum"
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
-            email_text += f"• {task.title} ({str(task.priority)}) - {due_date} - {duration_text}\n"
+            priority_short = str(task.priority).replace("TaskPriority.", "")
+            email_text += f"• {task.title} ({priority_short}) - {due_date} - {duration_text}\n"
         
         email_text += "\n"
         
@@ -445,7 +446,8 @@ async def get_tasks_summary():
         for task in at_risk_tasks:
             due_date = task.due.strftime("%d. %B") if task.due else "Kein Datum"
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
-            email_text += f"• {task.title} ({str(task.priority)}) - {due_date} - {duration_text}\n"
+            priority_short = str(task.priority).replace("TaskPriority.", "")
+            email_text += f"• {task.title} ({priority_short}) - {due_date} - {duration_text}\n"
         
         email_text += f"\nGesamt: {len(overdue_tasks) + len(at_risk_tasks)} Aufgaben benötigen Aufmerksamkeit\n\n"
         email_text += "🔗 Direkte Links:\n"
@@ -460,7 +462,8 @@ async def get_tasks_summary():
         for task in overdue_tasks:
             due_date = task.due.strftime("%d. %B") if task.due else "Kein Datum"
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
-            html_text += f"<li><strong>{task.title}</strong> ({str(task.priority)}) - {due_date} - {duration_text}</li>\n"
+            priority_short = str(task.priority).replace("TaskPriority.", "")
+            html_text += f"<li><strong>{task.title}</strong> ({priority_short}) - {due_date} - {duration_text}</li>\n"
         html_text += "</ul>\n\n"
         
         # At-risk section
@@ -468,7 +471,8 @@ async def get_tasks_summary():
         for task in at_risk_tasks:
             due_date = task.due.strftime("%d. %B") if task.due else "Kein Datum"
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
-            html_text += f"<li><strong>{task.title}</strong> ({str(task.priority)}) - {due_date} - {duration_text}</li>\n"
+            priority_short = str(task.priority).replace("TaskPriority.", "")
+            html_text += f"<li><strong>{task.title}</strong> ({priority_short}) - {due_date} - {duration_text}</li>\n"
         html_text += "</ul>\n\n"
         
         html_text += f"<p><strong>Gesamt: {len(overdue_tasks) + len(at_risk_tasks)} Aufgaben benötigen Aufmerksamkeit</strong></p>\n\n"
