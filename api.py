@@ -76,10 +76,14 @@ async def root():
             "tasks_at_risk": {
                 "path": "/tasks/at-risk",
                 "method": "GET",
-                "description": "Nur Tasks mit Risiko abrufen (at_risk = true)",
-                "response": "JSON mit Anzahl und Array von Task-Objekten",
+                "description": "Nur Tasks mit Risiko abrufen (at_risk = true), archivierte Tasks werden ausgeschlossen",
+                "response": "JSON mit Anzahl, Array von Task-Objekten und Filter-Informationen",
+                "filters": {
+                    "at_risk": "true",
+                    "exclude_archived": "true"
+                },
                 "example_response": {
-                    "count": 1283,
+                    "count": 45,
                     "tasks": [
                         {
                             "id": "9453408",
@@ -91,7 +95,11 @@ async def root():
                             "due": "2025-01-10T10:00:00Z",
                             "duration": 120.0
                         }
-                    ]
+                    ],
+                    "filter_info": {
+                        "excluded_archived": True,
+                        "description": "Archivierte Tasks werden aus Risiko-Berechnung ausgeschlossen"
+                    }
                 }
             }
         },
@@ -165,7 +173,7 @@ async def get_tasks():
 
 @app.get("/tasks/at-risk")
 async def get_tasks_at_risk():
-    """Get only tasks that are at risk"""
+    """Get only tasks that are at risk, excluding archived tasks"""
     try:
         from reclaim_sdk.client import ReclaimClient
         from reclaim_sdk.resources.task import Task
@@ -182,8 +190,11 @@ async def get_tasks_at_risk():
         # Get all tasks
         tasks = Task.list()
         
-        # Filter tasks that are at risk
-        at_risk_tasks = [task for task in tasks if task.at_risk]
+        # Filter tasks that are at risk AND not archived
+        at_risk_tasks = [
+            task for task in tasks 
+            if task.at_risk and str(task.status) != "TaskStatus.ARCHIVED"
+        ]
         
         # Convert to response format
         task_responses = []
@@ -201,8 +212,17 @@ async def get_tasks_at_risk():
         
         return {
             "count": len(task_responses),
-            "tasks": task_responses
+            "tasks": task_responses,
+            "filter_info": {
+                "excluded_archived": True,
+                "description": "Archivierte Tasks werden aus Risiko-Berechnung ausgeschlossen"
+            }
         }
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# For local development only
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
