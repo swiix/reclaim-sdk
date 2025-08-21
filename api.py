@@ -45,6 +45,43 @@ def format_duration_text(duration_hours: Optional[float]) -> Optional[str]:
         else:
             return f"{days}d {hours}h {minutes}min"
 
+def format_progress_text(time_chunks_spent: Optional[int], time_chunks_remaining: Optional[int]) -> Optional[str]:
+    """Format progress as 'Worksessions X/Y' or 'X remaining'"""
+    if time_chunks_spent is None or time_chunks_remaining is None:
+        return None
+    
+    if time_chunks_spent == 0 and time_chunks_remaining == 0:
+        return None
+    
+    total_chunks = time_chunks_spent + time_chunks_remaining
+    
+    if time_chunks_spent == 0:
+        return f"{format_duration_text(time_chunks_remaining / 4)} remaining"
+    elif time_chunks_remaining == 0:
+        return f"{format_duration_text(time_chunks_spent / 4)} done"
+    else:
+        spent_hours = time_chunks_spent / 4
+        total_hours = total_chunks / 4
+        return f"Worksessions {format_duration_text(spent_hours)}/{format_duration_text(total_hours)}"
+
+def format_snooze_days(snooze_until: Optional[datetime]) -> Optional[str]:
+    """Format snooze information with days postponed"""
+    if snooze_until is None:
+        return None
+    
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    
+    # Calculate days difference
+    days_diff = (snooze_until - now).days
+    
+    if days_diff > 0:
+        return f"Aufgeschoben bis {snooze_until.strftime('%d. %B')} (+{days_diff} Tage)"
+    elif days_diff < 0:
+        return f"Aufgeschoben bis {snooze_until.strftime('%d. %B')} ({abs(days_diff)} Tage überfällig)"
+    else:
+        return f"Aufgeschoben bis {snooze_until.strftime('%d. %B')} (heute)"
+
 app = FastAPI(
     title="Reclaim Tasks API",
     description="REST API für Reclaim.ai Aufgabenverwaltung",
@@ -71,6 +108,9 @@ class TaskResponse(BaseModel):
     duration: Optional[float] = None
     duration_text: Optional[str] = None
     snooze_until: Optional[datetime] = None
+    time_chunks_spent: Optional[int] = None
+    time_chunks_remaining: Optional[int] = None
+    progress_text: Optional[str] = None
 
 @app.get("/")
 async def root():
@@ -259,7 +299,10 @@ async def get_tasks():
                 due=task.due,
                 duration=task.duration,
                 duration_text=format_duration_text(task.duration),
-                snooze_until=task.snooze_until
+                snooze_until=task.snooze_until,
+                time_chunks_spent=task.time_chunks_spent,
+                time_chunks_remaining=task.time_chunks_remaining,
+                progress_text=format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)
             ))
         
         return task_responses
@@ -307,7 +350,10 @@ async def get_tasks_at_risk():
                 due=task.due,
                 duration=task.duration,
                 duration_text=format_duration_text(task.duration),
-                snooze_until=task.snooze_until
+                snooze_until=task.snooze_until,
+                time_chunks_spent=task.time_chunks_spent,
+                time_chunks_remaining=task.time_chunks_remaining,
+                progress_text=format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)
             ))
         
         return {
@@ -367,7 +413,10 @@ async def get_overdue_tasks():
                 due=task.due,
                 duration=task.duration,
                 duration_text=format_duration_text(task.duration),
-                snooze_until=task.snooze_until
+                snooze_until=task.snooze_until,
+                time_chunks_spent=task.time_chunks_spent,
+                time_chunks_remaining=task.time_chunks_remaining,
+                progress_text=format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)
             ))
         
         return {
@@ -441,8 +490,9 @@ async def get_tasks_summary():
             due_date = task.due.strftime("%d. %B") if task.due else "Kein Datum"
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
             priority_short = str(task.priority).replace("TaskPriority.", "")
-            snooze_info = f" (Aufgeschoben bis {task.snooze_until.strftime('%d. %B')})" if task.snooze_until else ""
-            email_text += f"• {task.title} ({priority_short}) - {due_date} - {duration_text}{snooze_info}\n"
+            snooze_info = f" ({format_snooze_days(task.snooze_until)})" if task.snooze_until else ""
+            progress_info = f" [{format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}]" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
+            email_text += f"• {task.title} ({priority_short}) - {due_date} - {duration_text}{snooze_info}{progress_info}\n"
         
         email_text += "\n"
         
@@ -452,8 +502,9 @@ async def get_tasks_summary():
             due_date = task.due.strftime("%d. %B") if task.due else "Kein Datum"
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
             priority_short = str(task.priority).replace("TaskPriority.", "")
-            snooze_info = f" (Aufgeschoben bis {task.snooze_until.strftime('%d. %B')})" if task.snooze_until else ""
-            email_text += f"• {task.title} ({priority_short}) - {due_date} - {duration_text}{snooze_info}\n"
+            snooze_info = f" ({format_snooze_days(task.snooze_until)})" if task.snooze_until else ""
+            progress_info = f" [{format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}]" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
+            email_text += f"• {task.title} ({priority_short}) - {due_date} - {duration_text}{snooze_info}{progress_info}\n"
         
         email_text += f"\nGesamt: {len(overdue_tasks) + len(at_risk_tasks)} Aufgaben benötigen Aufmerksamkeit\n\n"
         email_text += "🔗 Direkte Links:\n"
@@ -469,8 +520,9 @@ async def get_tasks_summary():
             due_date = task.due.strftime("%d. %B") if task.due else "Kein Datum"
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
             priority_short = str(task.priority).replace("TaskPriority.", "")
-            snooze_info = f" <em>(Aufgeschoben bis {task.snooze_until.strftime('%d. %B')})</em>" if task.snooze_until else ""
-            html_text += f"<li><strong><a href=\"https://app.reclaim.ai/tasks/{task.id}\">{task.title}</a></strong> ({priority_short}) - {due_date} - {duration_text}{snooze_info}</li>\n"
+            snooze_info = f" <em>({format_snooze_days(task.snooze_until)})</em>" if task.snooze_until else ""
+            progress_info = f" <strong>[{format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}]</strong>" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
+            html_text += f"<li><strong><a href=\"https://app.reclaim.ai/tasks/{task.id}\">{task.title}</a></strong> ({priority_short}) - {due_date} - {duration_text}{snooze_info}{progress_info}</li>\n"
         html_text += "</ul>\n\n"
         
         # At-risk section
@@ -479,8 +531,9 @@ async def get_tasks_summary():
             due_date = task.due.strftime("%d. %B") if task.due else "Kein Datum"
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
             priority_short = str(task.priority).replace("TaskPriority.", "")
-            snooze_info = f" <em>(Aufgeschoben bis {task.snooze_until.strftime('%d. %B')})</em>" if task.snooze_until else ""
-            html_text += f"<li><strong><a href=\"https://app.reclaim.ai/tasks/{task.id}\">{task.title}</a></strong> ({priority_short}) - {duration_text}{snooze_info}</li>\n"
+            snooze_info = f" <em>({format_snooze_days(task.snooze_until)})</em>" if task.snooze_until else ""
+            progress_info = f" <strong>[{format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}]</strong>" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
+            html_text += f"<li><strong><a href=\"https://app.reclaim.ai/tasks/{task.id}\">{task.title}</a></strong> ({priority_short}) - {duration_text}{snooze_info}{progress_info}</li>\n"
         html_text += "</ul>\n\n"
         
         html_text += f"<p><strong>Gesamt: {len(overdue_tasks) + len(at_risk_tasks)} Aufgaben benötigen Aufmerksamkeit</strong></p>\n\n"
