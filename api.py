@@ -114,11 +114,12 @@ async def root():
             "tasks_at_risk": {
                 "path": "/tasks/at-risk",
                 "method": "GET",
-                "description": "Nur Tasks mit Risiko abrufen (at_risk = true), archivierte Tasks werden ausgeschlossen",
+                "description": "Nur Tasks mit Risiko abrufen (at_risk = true), archivierte und stornierte Tasks werden ausgeschlossen",
                 "response": "JSON mit Anzahl, Array von Task-Objekten und Filter-Informationen",
                 "filters": {
                     "at_risk": "true",
-                    "exclude_archived": "true"
+                    "exclude_archived": "true",
+                    "exclude_cancelled": "true"
                 },
                 "example_response": {
                     "count": 45,
@@ -137,7 +138,40 @@ async def root():
                     ],
                     "filter_info": {
                         "excluded_archived": True,
-                        "description": "Archivierte Tasks werden aus Risiko-Berechnung ausgeschlossen"
+                        "excluded_cancelled": True,
+                        "description": "Archivierte und stornierte Tasks werden aus Risiko-Berechnung ausgeschlossen"
+                    }
+                }
+            },
+            "tasks_overdue": {
+                "path": "/tasks/overdue",
+                "method": "GET",
+                "description": "Nur überfällige Tasks abrufen (Fälligkeitsdatum in der Vergangenheit)",
+                "response": "JSON mit Anzahl, Array von Task-Objekten und Filter-Informationen",
+                "filters": {
+                    "due_date_past": "true",
+                    "exclude_archived": "true",
+                    "exclude_cancelled": "true"
+                },
+                "example_response": {
+                    "count": 3,
+                    "tasks": [
+                        {
+                            "id": "9453408",
+                            "title": "Überfälliger Task",
+                            "notes": "Task ist überfällig",
+                            "priority": "TaskPriority.P1",
+                            "status": "TaskStatus.SCHEDULED",
+                            "at_risk": True,
+                            "due": "2025-01-05T10:00:00Z",
+                            "duration": 1.0,
+                            "duration_text": "1h"
+                        }
+                    ],
+                    "filter_info": {
+                        "excluded_archived": True,
+                        "excluded_cancelled": True,
+                        "description": "Overdue Tasks (Fälligkeitsdatum in der Vergangenheit)"
                     }
                 }
             }
@@ -231,10 +265,12 @@ async def get_tasks_at_risk():
         # Get all tasks
         tasks = Task.list()
         
-        # Filter tasks that are at risk AND not archived
+        # Filter tasks that are at risk AND not archived AND not cancelled
         at_risk_tasks = [
             task for task in tasks 
-            if task.at_risk and str(task.status) != "TaskStatus.ARCHIVED"
+            if (task.at_risk and 
+                str(task.status) != "TaskStatus.ARCHIVED" and
+                str(task.status) != "TaskStatus.CANCELLED")
         ]
         
         # Convert to response format
@@ -257,7 +293,67 @@ async def get_tasks_at_risk():
             "tasks": task_responses,
             "filter_info": {
                 "excluded_archived": True,
-                "description": "Archivierte Tasks werden aus Risiko-Berechnung ausgeschlossen"
+                "excluded_cancelled": True,
+                "description": "Archivierte und stornierte Tasks werden aus Risiko-Berechnung ausgeschlossen"
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/tasks/overdue")
+async def get_overdue_tasks():
+    """Get only tasks that are overdue (due date in the past)"""
+    try:
+        from reclaim_sdk.client import ReclaimClient
+        from reclaim_sdk.resources.task import Task
+        from datetime import datetime, timezone
+        
+        # Configure client with token from environment
+        token = os.environ.get("RECLAIM_TOKEN")
+        if not token:
+            raise HTTPException(
+                status_code=500,
+                detail="RECLAIM_TOKEN environment variable is not set"
+            )
+        client = ReclaimClient.configure(token=token)
+        
+        # Get all tasks
+        tasks = Task.list()
+        
+        # Get current time in UTC
+        now = datetime.now(timezone.utc)
+        
+        # Filter tasks that are overdue AND not archived AND not cancelled
+        overdue_tasks = [
+            task for task in tasks 
+            if (task.due and task.due < now and 
+                str(task.status) != "TaskStatus.ARCHIVED" and
+                str(task.status) != "TaskStatus.CANCELLED")
+        ]
+        
+        # Convert to response format
+        task_responses = []
+        for task in overdue_tasks:
+            task_responses.append(TaskResponse(
+                id=str(task.id),
+                title=task.title,
+                notes=task.notes,
+                priority=str(task.priority) if task.priority else None,
+                status=str(task.status) if task.status else None,
+                at_risk=task.at_risk,
+                due=task.due,
+                duration=task.duration,
+                duration_text=format_duration_text(task.duration)
+            ))
+        
+        return {
+            "count": len(task_responses),
+            "tasks": task_responses,
+            "filter_info": {
+                "excluded_archived": True,
+                "excluded_cancelled": True,
+                "description": "Overdue Tasks (Fälligkeitsdatum in der Vergangenheit)"
             }
         }
         
