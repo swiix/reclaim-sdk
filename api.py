@@ -46,7 +46,7 @@ def format_duration_text(duration_hours: Optional[float]) -> Optional[str]:
             return f"{days}d {hours}h {minutes}min"
 
 def format_progress_text(time_chunks_spent: Optional[int], time_chunks_remaining: Optional[int]) -> Optional[str]:
-    """Format progress as 'Worksessions X/Y' or 'X remaining'"""
+    """Format progress as 'Arbeitsblöcke X/Y' or 'X verbleibend'"""
     if time_chunks_spent is None or time_chunks_remaining is None:
         return None
     
@@ -56,13 +56,13 @@ def format_progress_text(time_chunks_spent: Optional[int], time_chunks_remaining
     total_chunks = time_chunks_spent + time_chunks_remaining
     
     if time_chunks_spent == 0:
-        return f"{format_duration_text(time_chunks_remaining / 4)} remaining"
+        return f"{format_duration_text(time_chunks_remaining / 4)} verbleibend"
     elif time_chunks_remaining == 0:
-        return f"{format_duration_text(time_chunks_spent / 4)} done"
+        return f"{format_duration_text(time_chunks_spent / 4)} erledigt"
     else:
         spent_hours = time_chunks_spent / 4
         total_hours = total_chunks / 4
-        return f"Worksessions {format_duration_text(spent_hours)}/{format_duration_text(total_hours)}"
+        return f"Arbeitsblöcke {format_duration_text(spent_hours)}/{format_duration_text(total_hours)}"
 
 def format_snooze_days(snooze_until: Optional[datetime]) -> Optional[str]:
     """Format snooze information with days postponed"""
@@ -512,7 +512,7 @@ async def get_tasks_summary():
         for task in overdue_tasks:
             due_date_info = format_due_date_info(task.due, task.snooze_until)
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
-            priority_short = str(task.priority).replace("TaskPriority.", "")
+            priority_short = str(task.priority).replace("TaskPriority.P1", "P1").replace("TaskPriority.P2", "P2").replace("TaskPriority.P3", "P3").replace("TaskPriority.P4", "P4")
             progress_info = f" [{format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}]" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
             email_text += f"• {task.title} ({priority_short}) - {due_date_info} - {duration_text}{progress_info}\n"
         
@@ -523,7 +523,7 @@ async def get_tasks_summary():
         for task in at_risk_tasks:
             due_date_info = format_due_date_info(task.due, task.snooze_until)
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
-            priority_short = str(task.priority).replace("TaskPriority.", "")
+            priority_short = str(task.priority).replace("TaskPriority.P1", "P1").replace("TaskPriority.P2", "P2").replace("TaskPriority.P3", "P3").replace("TaskPriority.P4", "P4")
             progress_info = f" [{format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}]" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
             email_text += f"• {task.title} ({priority_short}) - {due_date_info} - {duration_text}{progress_info}\n"
         
@@ -540,7 +540,7 @@ async def get_tasks_summary():
         for task in overdue_tasks:
             due_date_info = format_due_date_info(task.due, task.snooze_until)
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
-            priority_short = str(task.priority).replace("TaskPriority.", "")
+            priority_short = str(task.priority).replace("TaskPriority.P1", "P1").replace("TaskPriority.P2", "P2").replace("TaskPriority.P3", "P3").replace("TaskPriority.P4", "P4")
             progress_info = f" <strong>[{format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}]</strong>" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
             html_text += f"<li><strong><a href=\"https://app.reclaim.ai/tasks/{task.id}\">{task.title}</a></strong> ({priority_short}) - {due_date_info} - {duration_text}{progress_info}</li>\n"
         html_text += "</ul>\n\n"
@@ -550,7 +550,7 @@ async def get_tasks_summary():
         for task in at_risk_tasks:
             due_date_info = format_due_date_info(task.due, task.snooze_until)
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
-            priority_short = str(task.priority).replace("TaskPriority.", "")
+            priority_short = str(task.priority).replace("TaskPriority.P1", "P1").replace("TaskPriority.P2", "P2").replace("TaskPriority.P3", "P3").replace("TaskPriority.P4", "P4")
             progress_info = f" <strong>[{format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}]</strong>" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
             html_text += f"<li><strong><a href=\"https://app.reclaim.ai/tasks/{task.id}\">{task.title}</a></strong> ({priority_short}) - {due_date_info} - {duration_text}{progress_info}</li>\n"
         html_text += "</ul>\n\n"
