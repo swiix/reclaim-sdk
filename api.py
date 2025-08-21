@@ -250,11 +250,33 @@ async def root():
                     "german_format": "true"
                 },
                 "example_response": {
-                    "text": "📅 15. Januar 2025\n\n📅 Überfällige Tasks (5):\n• steuerberater wechseln (P1) - 17. August - 3h 30min\n\n⚠️ Tasks mit Risiko (35):\n• Biban Umsetzung (P1) - 31. August - 2h 30min\n\nGesamt: 40 Aufgaben benötigen Aufmerksamkeit\n\n🔗 Direkte Links:\n• https://app.reclaim.ai/planner?taskSort=schedule - Zum Planner (Kalender)\n• https://app.reclaim.ai/priorities - Zum Prioritäts Planner",
-                    "html": "<h2>📅 15. Januar 2025</h2>\n\n<h3>📅 Überfällige Tasks (5):</h3>\n<ul>\n<li><strong>steuerberater wechseln</strong> (P1) - 17. August - 3h 30min</li>\n</ul>\n\n<h3>⚠️ Tasks mit Risiko (35):</h3>\n<ul>\n<li><strong>Biban Umsetzung</strong> (P1) - 31. August - 2h 30min</li>\n</ul>\n\n<p><strong>Gesamt: 40 Aufgaben benötigen Aufmerksamkeit</strong></p>\n\n<h3>🔗 Direkte Links:</h3>\n<ul>\n<li><a href=\"https://app.reclaim.ai/planner?taskSort=schedule\">Zum Planner (Kalender)</a></li>\n<li><a href=\"https://app.reclaim.ai/priorities\">Zum Prioritäts Planner</a></li>\n</ul>",
+                    "text": "📅 15. Januar 2025\n\n📅 Überfällige Tasks (5):\n• steuerberater wechseln (P1) - 17. August - 3h 30min\n\n⚠️ Tasks mit Risiko (35):\n• Biban Umsetzung (P1) - 31. August - 2h 30min\n\nGesamt: 40 Aufgaben benötigen Aufmerksamkeit\n\n🔗 Direkte Links:\n• https://app.reclaim.ai/planner - Kalender\n• https://app.reclaim.ai/priorities - Prioritäten",
+                    "html": "<h2>📅 15. Januar 2025</h2>\n\n<h3>📅 Überfällige Tasks (5):</h3>\n<ul>\n<li><strong>steuerberater wechseln</strong> (P1) - 17. August - 3h 30min</li>\n</ul>\n\n<h3>⚠️ Tasks mit Risiko (35):</h3>\n<ul>\n<li><strong>Biban Umsetzung</strong> (P1) - 31. August - 2h 30min</li>\n</ul>\n\n<p><strong>Gesamt: 40 Aufgaben benötigen Aufmerksamkeit</strong></p>\n\n<h3>🔗 Direkte Links:</h3>\n<ul>\n<li><a href=\"https://app.reclaim.ai/planner\">Kalender</a></li>\n<li><a href=\"https://app.reclaim.ai/priorities\">Prioritäten</a></li>\n</ul>",
                     "overdue_count": 5,
                     "at_risk_count": 35,
                     "total_count": 40,
+                    "generated_at": "2025-01-15T10:00:00Z"
+                }
+            },
+            "tasks_daily": {
+                "path": "/tasks/daily",
+                "method": "GET",
+                "description": "Tagesübersicht mit Zeitabschätzungen, Dringlichkeitsindikatoren und Aktionsplan",
+                "response": "JSON mit Tagesübersicht und Statistiken",
+                "features": {
+                    "urgency_groups": "Kritisch, Hohe Priorität, Mittlere Priorität",
+                    "time_estimates": "Geschätzte Arbeitszeit",
+                    "action_plan": "Heute Fokus-Plan",
+                    "daily_focused": "Für den Alltag optimiert"
+                },
+                "example_response": {
+                    "text": "📅 Tagesübersicht - 15. Januar 2025\n\n⏰ Geschätzte Arbeitszeit: 8h 30min\n📊 Aufgaben: 40 (Überfällig: 5, Risiko: 35)\n\n🚨 KRITISCH - Sofort erledigen (2):\n• steuerberater wechseln - 17. August → 21. August (+3 Tage) - 3h 30min\n\n🔥 HOHE PRIORITÄT - Heute erledigen (8):\n• Biban Umsetzung - 31. August → 11. July (52 Tage früher) - 2h 30min\n\n⚡ MITTLERE PRIORITÄT - Diese Woche (5):\n• HEK Dokument ausfüllen - 29. August → 16. August (14 Tage früher) - 1h\n... und 20 weitere\n\n🎯 HEUTE FOKUS:\n1. 2 kritische Tasks zuerst\n2. 8 hohe Priorität\n3. 3 mittlere Priorität\n\n🔗 Schnellzugriff:\n• https://app.reclaim.ai/planner - Kalender\n• https://app.reclaim.ai/priorities - Prioritäten",
+                    "critical_count": 2,
+                    "high_priority_count": 8,
+                    "medium_priority_count": 25,
+                    "low_priority_count": 5,
+                    "total_time_hours": 8.5,
+                    "total_tasks": 40,
                     "generated_at": "2025-01-15T10:00:00Z"
                 }
             }
@@ -529,8 +551,8 @@ async def get_tasks_summary():
         
         email_text += f"\nGesamt: {len(overdue_tasks) + len(at_risk_tasks)} Aufgaben benötigen Aufmerksamkeit\n\n"
         email_text += "🔗 Direkte Links:\n"
-        email_text += "• https://app.reclaim.ai/planner?taskSort=schedule - Zum Planner (Kalender)\n"
-        email_text += "• https://app.reclaim.ai/priorities - Zum Prioritäts Planner"
+        email_text += "• https://app.reclaim.ai/planner - Kalender\n"
+        email_text += "• https://app.reclaim.ai/priorities - Prioritäten"
         
         # Generate HTML version
         html_text = f"<h2>📅 {current_date}</h2>\n\n"
@@ -557,8 +579,8 @@ async def get_tasks_summary():
         
         html_text += f"<p><strong>Gesamt: {len(overdue_tasks) + len(at_risk_tasks)} Aufgaben benötigen Aufmerksamkeit</strong></p>\n\n"
         html_text += "<h3>🔗 Direkte Links:</h3>\n<ul>\n"
-        html_text += '<li><a href="https://app.reclaim.ai/planner?taskSort=schedule">Zum Planner (Kalender)</a></li>\n'
-        html_text += '<li><a href="https://app.reclaim.ai/priorities">Zum Prioritäts Planner</a></li>\n'
+        html_text += '<li><a href="https://app.reclaim.ai/planner">Kalender</a></li>\n'
+        html_text += '<li><a href="https://app.reclaim.ai/priorities">Prioritäten</a></li>\n'
         html_text += "</ul>"
         
         return {
@@ -572,6 +594,142 @@ async def get_tasks_summary():
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/tasks/daily")
+async def get_daily_tasks():
+    """Get a daily-focused view of tasks with time estimates and urgency indicators"""
+    try:
+        from reclaim_sdk.client import ReclaimClient
+        from reclaim_sdk.resources.task import Task, TaskStatus
+        from datetime import datetime, timezone
+        
+        # Configure client with token from environment
+        token = os.environ.get("RECLAIM_TOKEN")
+        if not token:
+            raise HTTPException(
+                status_code=500,
+                detail="RECLAIM_TOKEN environment variable is not set"
+            )
+        client = ReclaimClient.configure(token=token)
+        
+        # Get all tasks
+        tasks = Task.list()
+        
+        # Filter tasks (same as summary but with additional logic)
+        overdue_tasks = []
+        at_risk_tasks = []
+        
+        for task in tasks:
+            # Skip archived and cancelled tasks
+            if task.status in [TaskStatus.ARCHIVED, TaskStatus.CANCELLED]:
+                continue
+                
+            # Check if overdue (due date is in the past)
+            if task.due and task.due < datetime.now(timezone.utc):
+                overdue_tasks.append(task)
+            # Check if at risk (but not overdue)
+            elif task.at_risk and task.due and task.due >= datetime.now(timezone.utc):
+                at_risk_tasks.append(task)
+        
+        # Sort by priority and due date
+        def sort_key(task):
+            priority_order = {"TaskPriority.P1": 1, "TaskPriority.P2": 2, "TaskPriority.P3": 3, "TaskPriority.P4": 4}
+            return (priority_order.get(str(task.priority), 5), task.due or datetime.max.replace(tzinfo=timezone.utc))
+        
+        overdue_tasks.sort(key=sort_key)
+        at_risk_tasks.sort(key=sort_key)
+        
+        # Calculate total time needed
+        total_time = 0
+        for task in overdue_tasks + at_risk_tasks:
+            if task.duration:
+                total_time += task.duration
+        
+        # Group by urgency
+        critical_tasks = []  # Overdue P1
+        high_priority_tasks = []  # Overdue P2 or At-risk P1
+        medium_priority_tasks = []  # At-risk P2
+        low_priority_tasks = []  # At-risk P3/P4
+        
+        for task in overdue_tasks:
+            if str(task.priority) == "TaskPriority.P1":
+                critical_tasks.append(task)
+            else:
+                high_priority_tasks.append(task)
+        
+        for task in at_risk_tasks:
+            if str(task.priority) == "TaskPriority.P1":
+                high_priority_tasks.append(task)
+            elif str(task.priority) == "TaskPriority.P2":
+                medium_priority_tasks.append(task)
+            else:
+                low_priority_tasks.append(task)
+        
+        # Generate daily summary
+        current_date = datetime.now().strftime("%d. %B %Y")
+        
+        daily_text = f"📅 Tagesübersicht - {current_date}\n\n"
+        
+        # Time estimate
+        daily_text += f"⏰ Geschätzte Arbeitszeit: {format_duration_text(total_time)}\n"
+        daily_text += f"📊 Aufgaben: {len(overdue_tasks + at_risk_tasks)} (Überfällig: {len(overdue_tasks)}, Risiko: {len(at_risk_tasks)})\n\n"
+        
+        # Critical tasks (most urgent)
+        if critical_tasks:
+            daily_text += f"🚨 KRITISCH - Sofort erledigen ({len(critical_tasks)}):\n"
+            for task in critical_tasks:
+                due_date_info = format_due_date_info(task.due, task.snooze_until)
+                duration_text = format_duration_text(task.duration) or "Keine Dauer"
+                progress_info = f" [{format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}]" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
+                daily_text += f"• {task.title} - {due_date_info} - {duration_text}{progress_info}\n"
+            daily_text += "\n"
+        
+        # High priority tasks
+        if high_priority_tasks:
+            daily_text += f"🔥 HOHE PRIORITÄT - Heute erledigen ({len(high_priority_tasks)}):\n"
+            for task in high_priority_tasks:
+                due_date_info = format_due_date_info(task.due, task.snooze_until)
+                duration_text = format_duration_text(task.duration) or "Keine Dauer"
+                progress_info = f" [{format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}]" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
+                daily_text += f"• {task.title} - {due_date_info} - {duration_text}{progress_info}\n"
+            daily_text += "\n"
+        
+        # Medium priority tasks
+        if medium_priority_tasks:
+            daily_text += f"⚡ MITTLERE PRIORITÄT - Diese Woche ({len(medium_priority_tasks)}):\n"
+            for task in medium_priority_tasks[:5]:  # Limit to 5 for daily view
+                due_date_info = format_due_date_info(task.due, task.snooze_until)
+                duration_text = format_duration_text(task.duration) or "Keine Dauer"
+                progress_info = f" [{format_progress_text(task.time_chunks_spent, task.time_chunks_remaining)}]" if format_progress_text(task.time_chunks_spent, task.time_chunks_remaining) else ""
+                daily_text += f"• {task.title} - {due_date_info} - {duration_text}{progress_info}\n"
+            if len(medium_priority_tasks) > 5:
+                daily_text += f"... und {len(medium_priority_tasks) - 5} weitere\n"
+            daily_text += "\n"
+        
+        # Quick actions
+        daily_text += "🎯 HEUTE FOKUS:\n"
+        daily_text += f"1. {len(critical_tasks)} kritische Tasks zuerst\n"
+        daily_text += f"2. {len(high_priority_tasks)} hohe Priorität\n"
+        daily_text += f"3. {min(3, len(medium_priority_tasks))} mittlere Priorität\n\n"
+        
+        # Links
+        daily_text += "🔗 Schnellzugriff:\n"
+        daily_text += "• https://app.reclaim.ai/planner - Kalender\n"
+        daily_text += "• https://app.reclaim.ai/priorities - Prioritäten\n"
+        
+        return {
+            "text": daily_text,
+            "critical_count": len(critical_tasks),
+            "high_priority_count": len(high_priority_tasks),
+            "medium_priority_count": len(medium_priority_tasks),
+            "low_priority_count": len(low_priority_tasks),
+            "total_time_hours": total_time,
+            "total_tasks": len(overdue_tasks + at_risk_tasks),
+            "generated_at": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting daily tasks: {str(e)}")
 
 # For local development only
 if __name__ == "__main__":
