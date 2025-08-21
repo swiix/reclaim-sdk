@@ -131,6 +131,16 @@ def get_next_event_for_task(task_id: int, client: ReclaimClient) -> Optional[dic
         else:
             time_until_text = "jetzt"
         
+        # Check if event is today and add "HEUTE" indicator
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end = today_start + timedelta(days=1)
+        
+        # Convert event start to UTC for comparison
+        event_start_utc = next_event.event_start.astimezone(timezone.utc)
+        
+        if today_start <= event_start_utc < today_end:
+            time_until_text = f"HEUTE {time_until_text}"
+        
         return {
             "event_id": next_event.event_id,
             "title": next_event.title,
