@@ -6,12 +6,12 @@ from datetime import datetime
 import os
 import sys
 
-# Add the parent directory to the path to import reclaim_sdk
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add the current directory to the path to import reclaim_sdk
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 app = FastAPI(
-    title="Simple Reclaim Tasks API",
-    description="Simplified API für Reclaim.ai Aufgabenverwaltung",
+    title="Reclaim Tasks API",
+    description="REST API für Reclaim.ai Aufgabenverwaltung",
     version="1.0.0"
 )
 
@@ -111,9 +111,9 @@ async def root():
             "setup": "export RECLAIM_TOKEN='your_token_here'"
         },
         "usage_examples": {
-            "get_all_tasks": "curl http://localhost:8001/tasks",
-            "get_risk_tasks": "curl http://localhost:8001/tasks/at-risk",
-            "health_check": "curl http://localhost:8001/health"
+            "get_all_tasks": "curl https://your-vercel-url.vercel.app/tasks",
+            "get_risk_tasks": "curl https://your-vercel-url.vercel.app/tasks/at-risk",
+            "health_check": "curl https://your-vercel-url.vercel.app/health"
         },
         "error_handling": {
             "401": "Authentication failed - Token ungültig",
@@ -206,8 +206,3 @@ async def get_tasks_at_risk():
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-# For local development only
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
