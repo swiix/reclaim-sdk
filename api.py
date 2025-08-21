@@ -174,6 +174,24 @@ async def root():
                         "description": "Overdue Tasks (Fälligkeitsdatum in der Vergangenheit)"
                     }
                 }
+            },
+            "tasks_summary": {
+                "path": "/tasks/summary",
+                "method": "GET",
+                "description": "E-Mail-Text mit überfälligen und at-risk Tasks, sortiert nach Priorität",
+                "response": "JSON mit E-Mail-Text und Statistiken",
+                "features": {
+                    "sorted_by_priority": "P1, P2, P3, P4",
+                    "email_ready": "true",
+                    "german_format": "true"
+                },
+                "example_response": {
+                    "email_text": "📅 15. Januar 2025\n\n📅 Überfällige Tasks (5):\n• steuerberater wechseln (P1) - 17. August - 3h 30min\n\n⚠️ Tasks mit Risiko (35):\n• Biban Umsetzung (P1) - 31. August - 2h 30min\n\nGesamt: 40 Aufgaben benötigen Aufmerksamkeit",
+                    "overdue_count": 5,
+                    "at_risk_count": 35,
+                    "total_count": 40,
+                    "generated_at": "2025-01-15T10:00:00Z"
+                }
             }
         },
         "task_properties": {
@@ -355,6 +373,87 @@ async def get_overdue_tasks():
                 "excluded_cancelled": True,
                 "description": "Overdue Tasks (Fälligkeitsdatum in der Vergangenheit)"
             }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/tasks/summary")
+async def get_tasks_summary():
+    """Get a summary of overdue and at-risk tasks as readable email text"""
+    try:
+        from reclaim_sdk.client import ReclaimClient
+        from reclaim_sdk.resources.task import Task
+        from datetime import datetime, timezone
+        
+        # Configure client with token from environment
+        token = os.environ.get("RECLAIM_TOKEN")
+        if not token:
+            raise HTTPException(
+                status_code=500,
+                detail="RECLAIM_TOKEN environment variable is not set"
+            )
+        client = ReclaimClient.configure(token=token)
+        
+        # Get all tasks
+        tasks = Task.list()
+        
+        # Get current time in UTC
+        now = datetime.now(timezone.utc)
+        
+        # Filter overdue tasks (not archived, not cancelled)
+        overdue_tasks = [
+            task for task in tasks 
+            if (task.due and task.due < now and 
+                str(task.status) != "TaskStatus.ARCHIVED" and
+                str(task.status) != "TaskStatus.CANCELLED")
+        ]
+        
+        # Filter at-risk tasks (not archived, not cancelled)
+        at_risk_tasks = [
+            task for task in tasks 
+            if (task.at_risk and 
+                str(task.status) != "TaskStatus.ARCHIVED" and
+                str(task.status) != "TaskStatus.CANCELLED")
+        ]
+        
+        # Sort by priority (P1, P2, P3, P4)
+        def priority_sort_key(task):
+            priority_order = {"TaskPriority.P1": 1, "TaskPriority.P2": 2, "TaskPriority.P3": 3, "TaskPriority.P4": 4}
+            return priority_order.get(str(task.priority), 5)
+        
+        overdue_tasks.sort(key=priority_sort_key)
+        at_risk_tasks.sort(key=priority_sort_key)
+        
+        # Generate email text
+        current_date = datetime.now().strftime("%d. %B %Y")
+        
+        email_text = f"📅 {current_date}\n\n"
+        
+        # Overdue section
+        email_text += f"📅 Überfällige Tasks ({len(overdue_tasks)}):\n"
+        for task in overdue_tasks:
+            due_date = task.due.strftime("%d. %B") if task.due else "Kein Datum"
+            duration_text = format_duration_text(task.duration) or "Keine Dauer"
+            email_text += f"• {task.title} ({str(task.priority)}) - {due_date} - {duration_text}\n"
+        
+        email_text += "\n"
+        
+        # At-risk section
+        email_text += f"⚠️ Tasks mit Risiko ({len(at_risk_tasks)}):\n"
+        for task in at_risk_tasks:
+            due_date = task.due.strftime("%d. %B") if task.due else "Kein Datum"
+            duration_text = format_duration_text(task.duration) or "Keine Dauer"
+            email_text += f"• {task.title} ({str(task.priority)}) - {due_date} - {duration_text}\n"
+        
+        email_text += f"\nGesamt: {len(overdue_tasks) + len(at_risk_tasks)} Aufgaben benötigen Aufmerksamkeit"
+        
+        return {
+            "email_text": email_text,
+            "overdue_count": len(overdue_tasks),
+            "at_risk_count": len(at_risk_tasks),
+            "total_count": len(overdue_tasks) + len(at_risk_tasks),
+            "generated_at": datetime.now().isoformat()
         }
         
     except Exception as e:
