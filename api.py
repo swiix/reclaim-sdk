@@ -70,6 +70,7 @@ class TaskResponse(BaseModel):
     due: Optional[datetime] = None
     duration: Optional[float] = None
     duration_text: Optional[str] = None
+    snooze_until: Optional[datetime] = None
 
 @app.get("/")
 async def root():
@@ -257,7 +258,8 @@ async def get_tasks():
                 at_risk=task.at_risk,
                 due=task.due,
                 duration=task.duration,
-                duration_text=format_duration_text(task.duration)
+                duration_text=format_duration_text(task.duration),
+                snooze_until=task.snooze_until
             ))
         
         return task_responses
@@ -304,7 +306,8 @@ async def get_tasks_at_risk():
                 at_risk=task.at_risk,
                 due=task.due,
                 duration=task.duration,
-                duration_text=format_duration_text(task.duration)
+                duration_text=format_duration_text(task.duration),
+                snooze_until=task.snooze_until
             ))
         
         return {
@@ -363,7 +366,8 @@ async def get_overdue_tasks():
                 at_risk=task.at_risk,
                 due=task.due,
                 duration=task.duration,
-                duration_text=format_duration_text(task.duration)
+                duration_text=format_duration_text(task.duration),
+                snooze_until=task.snooze_until
             ))
         
         return {
@@ -437,7 +441,8 @@ async def get_tasks_summary():
             due_date = task.due.strftime("%d. %B") if task.due else "Kein Datum"
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
             priority_short = str(task.priority).replace("TaskPriority.", "")
-            email_text += f"• {task.title} ({priority_short}) - {due_date} - {duration_text}\n"
+            snooze_info = f" (Aufgeschoben bis {task.snooze_until.strftime('%d. %B')})" if task.snooze_until else ""
+            email_text += f"• {task.title} ({priority_short}) - {due_date} - {duration_text}{snooze_info}\n"
         
         email_text += "\n"
         
@@ -447,7 +452,8 @@ async def get_tasks_summary():
             due_date = task.due.strftime("%d. %B") if task.due else "Kein Datum"
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
             priority_short = str(task.priority).replace("TaskPriority.", "")
-            email_text += f"• {task.title} ({priority_short}) - {due_date} - {duration_text}\n"
+            snooze_info = f" (Aufgeschoben bis {task.snooze_until.strftime('%d. %B')})" if task.snooze_until else ""
+            email_text += f"• {task.title} ({priority_short}) - {due_date} - {duration_text}{snooze_info}\n"
         
         email_text += f"\nGesamt: {len(overdue_tasks) + len(at_risk_tasks)} Aufgaben benötigen Aufmerksamkeit\n\n"
         email_text += "🔗 Direkte Links:\n"
@@ -463,7 +469,8 @@ async def get_tasks_summary():
             due_date = task.due.strftime("%d. %B") if task.due else "Kein Datum"
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
             priority_short = str(task.priority).replace("TaskPriority.", "")
-            html_text += f"<li><strong><a href=\"https://app.reclaim.ai/tasks/{task.id}\">{task.title}</a></strong> ({priority_short}) - {due_date} - {duration_text}</li>\n"
+            snooze_info = f" <em>(Aufgeschoben bis {task.snooze_until.strftime('%d. %B')})</em>" if task.snooze_until else ""
+            html_text += f"<li><strong><a href=\"https://app.reclaim.ai/tasks/{task.id}\">{task.title}</a></strong> ({priority_short}) - {due_date} - {duration_text}{snooze_info}</li>\n"
         html_text += "</ul>\n\n"
         
         # At-risk section
@@ -472,7 +479,8 @@ async def get_tasks_summary():
             due_date = task.due.strftime("%d. %B") if task.due else "Kein Datum"
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
             priority_short = str(task.priority).replace("TaskPriority.", "")
-            html_text += f"<li><strong><a href=\"https://app.reclaim.ai/tasks/{task.id}\">{task.title}</a></strong> ({priority_short}) - {due_date} - {duration_text}</li>\n"
+            snooze_info = f" <em>(Aufgeschoben bis {task.snooze_until.strftime('%d. %B')})</em>" if task.snooze_until else ""
+            html_text += f"<li><strong><a href=\"https://app.reclaim.ai/tasks/{task.id}\">{task.title}</a></strong> ({priority_short}) - {duration_text}{snooze_info}</li>\n"
         html_text += "</ul>\n\n"
         
         html_text += f"<p><strong>Gesamt: {len(overdue_tasks) + len(at_risk_tasks)} Aufgaben benötigen Aufmerksamkeit</strong></p>\n\n"
