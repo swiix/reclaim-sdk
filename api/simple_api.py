@@ -39,10 +39,85 @@ async def root():
     return {
         "message": "Reclaim Tasks API",
         "version": "1.0.0",
+        "description": "REST API für Reclaim.ai Aufgabenverwaltung mit erweiterten Filtermöglichkeiten",
+        "documentation": {
+            "swagger_ui": "/docs",
+            "redoc": "/redoc"
+        },
         "endpoints": {
-            "tasks": "/tasks",
-            "tasks_at_risk": "/tasks/at-risk",
-            "health": "/health"
+            "root": {
+                "path": "/",
+                "method": "GET",
+                "description": "API-Informationen und Dokumentation",
+                "response": "JSON mit API-Details"
+            },
+            "health": {
+                "path": "/health",
+                "method": "GET", 
+                "description": "Health Check für API-Status",
+                "response": "JSON mit Status und Timestamp"
+            },
+            "all_tasks": {
+                "path": "/tasks",
+                "method": "GET",
+                "description": "Alle Tasks aus Reclaim.ai abrufen",
+                "response": "Array von Task-Objekten",
+                "example_response": {
+                    "id": "9453408",
+                    "title": "Task Titel",
+                    "notes": "Task Beschreibung",
+                    "priority": "TaskPriority.P2",
+                    "status": "TaskStatus.IN_PROGRESS",
+                    "at_risk": False,
+                    "due": "2025-01-15T10:00:00Z",
+                    "duration": 60.0
+                }
+            },
+            "tasks_at_risk": {
+                "path": "/tasks/at-risk",
+                "method": "GET",
+                "description": "Nur Tasks mit Risiko abrufen (at_risk = true)",
+                "response": "JSON mit Anzahl und Array von Task-Objekten",
+                "example_response": {
+                    "count": 1283,
+                    "tasks": [
+                        {
+                            "id": "9453408",
+                            "title": "Risiko Task",
+                            "notes": "Task mit Risiko",
+                            "priority": "TaskPriority.P1",
+                            "status": "TaskStatus.SCHEDULED",
+                            "at_risk": True,
+                            "due": "2025-01-10T10:00:00Z",
+                            "duration": 120.0
+                        }
+                    ]
+                }
+            }
+        },
+        "task_properties": {
+            "id": "Eindeutige Task-ID (String)",
+            "title": "Titel der Aufgabe (String)",
+            "notes": "Notizen/Beschreibung (String, optional)",
+            "priority": "Priorität: P1, P2, P3, P4 (String)",
+            "status": "Status: NEW, SCHEDULED, IN_PROGRESS, COMPLETE, CANCELLED, ARCHIVED (String)",
+            "at_risk": "Risiko-Status (Boolean)",
+            "due": "Fälligkeitsdatum (ISO 8601 String, optional)",
+            "duration": "Geplante Dauer in Minuten (Float, optional)"
+        },
+        "authentication": {
+            "method": "API Token",
+            "environment_variable": "RECLAIM_TOKEN",
+            "setup": "export RECLAIM_TOKEN='your_token_here'"
+        },
+        "usage_examples": {
+            "get_all_tasks": "curl http://localhost:8001/tasks",
+            "get_risk_tasks": "curl http://localhost:8001/tasks/at-risk",
+            "health_check": "curl http://localhost:8001/health"
+        },
+        "error_handling": {
+            "401": "Authentication failed - Token ungültig",
+            "500": "Internal server error - API oder Reclaim.ai Fehler"
         }
     }
 
