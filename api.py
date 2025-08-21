@@ -186,7 +186,8 @@ async def root():
                     "german_format": "true"
                 },
                 "example_response": {
-                    "email_text": "📅 15. Januar 2025\n\n📅 Überfällige Tasks (5):\n• steuerberater wechseln (P1) - 17. August - 3h 30min\n\n⚠️ Tasks mit Risiko (35):\n• Biban Umsetzung (P1) - 31. August - 2h 30min\n\nGesamt: 40 Aufgaben benötigen Aufmerksamkeit\n\n🔗 Direkte Links:\n• https://app.reclaim.ai/planner?taskSort=schedule - Zum Planner (Kalender)\n• https://app.reclaim.ai/priorities - Zum Prioritäts Planner",
+                    "text": "📅 15. Januar 2025\n\n📅 Überfällige Tasks (5):\n• steuerberater wechseln (P1) - 17. August - 3h 30min\n\n⚠️ Tasks mit Risiko (35):\n• Biban Umsetzung (P1) - 31. August - 2h 30min\n\nGesamt: 40 Aufgaben benötigen Aufmerksamkeit\n\n🔗 Direkte Links:\n• https://app.reclaim.ai/planner?taskSort=schedule - Zum Planner (Kalender)\n• https://app.reclaim.ai/priorities - Zum Prioritäts Planner",
+                    "html": "<h2>📅 15. Januar 2025</h2>\n\n<h3>📅 Überfällige Tasks (5):</h3>\n<ul>\n<li><strong>steuerberater wechseln</strong> (P1) - 17. August - 3h 30min</li>\n</ul>\n\n<h3>⚠️ Tasks mit Risiko (35):</h3>\n<ul>\n<li><strong>Biban Umsetzung</strong> (P1) - 31. August - 2h 30min</li>\n</ul>\n\n<p><strong>Gesamt: 40 Aufgaben benötigen Aufmerksamkeit</strong></p>\n\n<h3>🔗 Direkte Links:</h3>\n<ul>\n<li><a href=\"https://app.reclaim.ai/planner?taskSort=schedule\">Zum Planner (Kalender)</a></li>\n<li><a href=\"https://app.reclaim.ai/priorities\">Zum Prioritäts Planner</a></li>\n</ul>",
                     "overdue_count": 5,
                     "at_risk_count": 35,
                     "total_count": 40,
@@ -451,8 +452,34 @@ async def get_tasks_summary():
         email_text += "• https://app.reclaim.ai/planner?taskSort=schedule - Zum Planner (Kalender)\n"
         email_text += "• https://app.reclaim.ai/priorities - Zum Prioritäts Planner"
         
+        # Generate HTML version
+        html_text = f"<h2>📅 {current_date}</h2>\n\n"
+        
+        # Overdue section
+        html_text += f"<h3>📅 Überfällige Tasks ({len(overdue_tasks)}):</h3>\n<ul>\n"
+        for task in overdue_tasks:
+            due_date = task.due.strftime("%d. %B") if task.due else "Kein Datum"
+            duration_text = format_duration_text(task.duration) or "Keine Dauer"
+            html_text += f"<li><strong>{task.title}</strong> ({str(task.priority)}) - {due_date} - {duration_text}</li>\n"
+        html_text += "</ul>\n\n"
+        
+        # At-risk section
+        html_text += f"<h3>⚠️ Tasks mit Risiko ({len(at_risk_tasks)}):</h3>\n<ul>\n"
+        for task in at_risk_tasks:
+            due_date = task.due.strftime("%d. %B") if task.due else "Kein Datum"
+            duration_text = format_duration_text(task.duration) or "Keine Dauer"
+            html_text += f"<li><strong>{task.title}</strong> ({str(task.priority)}) - {due_date} - {duration_text}</li>\n"
+        html_text += "</ul>\n\n"
+        
+        html_text += f"<p><strong>Gesamt: {len(overdue_tasks) + len(at_risk_tasks)} Aufgaben benötigen Aufmerksamkeit</strong></p>\n\n"
+        html_text += "<h3>🔗 Direkte Links:</h3>\n<ul>\n"
+        html_text += '<li><a href="https://app.reclaim.ai/planner?taskSort=schedule">Zum Planner (Kalender)</a></li>\n'
+        html_text += '<li><a href="https://app.reclaim.ai/priorities">Zum Prioritäts Planner</a></li>\n'
+        html_text += "</ul>"
+        
         return {
-            "email_text": email_text,
+            "text": email_text,
+            "html": html_text,
             "overdue_count": len(overdue_tasks),
             "at_risk_count": len(at_risk_tasks),
             "total_count": len(overdue_tasks) + len(at_risk_tasks),
