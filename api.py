@@ -617,9 +617,10 @@ async def get_tasks_summary():
         
         email_text += "\n"
         
-        # At-risk section
-        email_text += f"⚠️ Tasks mit Risiko ({len(at_risk_tasks)}):\n"
-        for task in at_risk_tasks:
+        # At-risk section (exclude tasks that are already overdue)
+        at_risk_only_tasks = [task for task in at_risk_tasks if task not in overdue_tasks]
+        email_text += f"⚠️ Tasks mit Risiko ({len(at_risk_only_tasks)}):\n"
+        for task in at_risk_only_tasks:
             due_date_info = format_due_date_info(task.due, task.snooze_until)
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
             priority_short = str(task.priority).replace("TaskPriority.P1", "P1").replace("TaskPriority.P2", "P2").replace("TaskPriority.P3", "P3").replace("TaskPriority.P4", "P4")
@@ -634,7 +635,7 @@ async def get_tasks_summary():
             else:
                 email_text += f"• {task.title} ({priority_short}) - {due_date_info} - {duration_text}{event_info}\n"
         
-        email_text += f"\nGesamt: {len(overdue_tasks) + len(at_risk_tasks)} Aufgaben benötigen Aufmerksamkeit\n\n"
+        email_text += f"\nGesamt: {len(overdue_tasks) + len(at_risk_only_tasks)} Aufgaben benötigen Aufmerksamkeit\n\n"
         email_text += "🔗 Direkte Links:\n"
         email_text += "• https://app.reclaim.ai/planner - Kalender\n"
         email_text += "• https://app.reclaim.ai/priorities - Prioritäten"
@@ -657,9 +658,9 @@ async def get_tasks_summary():
             html_text += f"<li><strong><a href=\"https://app.reclaim.ai/tasks/{task.id}\">{task.title}</a></strong> ({priority_short}) - {due_date_info} - {duration_text}{progress_info}{event_info}</li>\n"
         html_text += "</ul>\n\n"
         
-        # At-risk section
-        html_text += f"<h3>⚠️ Tasks mit Risiko ({len(at_risk_tasks)}):</h3>\n<ul>\n"
-        for task in at_risk_tasks:
+        # At-risk section (exclude tasks that are already overdue)
+        html_text += f"<h3>⚠️ Tasks mit Risiko ({len(at_risk_only_tasks)}):</h3>\n<ul>\n"
+        for task in at_risk_only_tasks:
             due_date_info = format_due_date_info(task.due, task.snooze_until)
             duration_text = format_duration_text(task.duration) or "Keine Dauer"
             priority_short = str(task.priority).replace("TaskPriority.P1", "P1").replace("TaskPriority.P2", "P2").replace("TaskPriority.P3", "P3").replace("TaskPriority.P4", "P4")
@@ -672,7 +673,7 @@ async def get_tasks_summary():
             html_text += f"<li><strong><a href=\"https://app.reclaim.ai/tasks/{task.id}\">{task.title}</a></strong> ({priority_short}) - {due_date_info} - {duration_text}{progress_info}{event_info}</li>\n"
         html_text += "</ul>\n\n"
         
-        html_text += f"<p><strong>Gesamt: {len(overdue_tasks) + len(at_risk_tasks)} Aufgaben benötigen Aufmerksamkeit</strong></p>\n\n"
+        html_text += f"<p><strong>Gesamt: {len(overdue_tasks) + len(at_risk_only_tasks)} Aufgaben benötigen Aufmerksamkeit</strong></p>\n\n"
         html_text += "<h3>🔗 Direkte Links:</h3>\n<ul>\n"
         html_text += '<li><a href="https://app.reclaim.ai/planner">Kalender</a></li>\n'
         html_text += '<li><a href="https://app.reclaim.ai/priorities">Prioritäten</a></li>\n'
@@ -682,8 +683,8 @@ async def get_tasks_summary():
             "text": email_text,
             "html": html_text,
             "overdue_count": len(overdue_tasks),
-            "at_risk_count": len(at_risk_tasks),
-            "total_count": len(overdue_tasks) + len(at_risk_tasks),
+            "at_risk_count": len(at_risk_only_tasks),
+            "total_count": len(overdue_tasks) + len(at_risk_only_tasks),
             "generated_at": datetime.now().isoformat()
         }
         
